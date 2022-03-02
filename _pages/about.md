@@ -4,8 +4,4 @@ title: About Me
 permalink: /about/
 ---
 
-This website is powered by **[fastpages](https://github.com/fastai/fastpages)** [^1].
-
-
-
-[^1]:a blogging platform that natively supports Jupyter notebooks in addition to other formats.
+PhD student in Media and Culture Industry at Soochow University, China. Experienced researcher in media and culture. Skilled in data analysis, software, programming, and academic writing. Master of Journalism and Communication focusing on the negative side of media use.
