@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="twitter:card" content="summary_large_image" /><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>How to smoothen noisy data and find peaks and dips in a line plot using Python | Sergey Yurkov</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="How to smoothen noisy data and find peaks and dips in a line plot using Python" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="In this small tutorial we will use the U.S. COVID-19 inoculation data to demonstrate the effect of the Savitzky-Golay filter and find the most prominent peaks and dips in daily vaccinations." />
+<meta property="og:description" content="In this small tutorial we will use the U.S. COVID-19 inoculation data to demonstrate the effect of the Savitzky-Golay filter and find the most prominent peaks and dips in daily vaccinations." />
+<link rel="canonical" href="https://sergeyyurkov1.github.io/blog/python/jupyter/2022/03/02/_03_03_Savitzky_Golay_Filter.html" />
+<meta property="og:url" content="https://sergeyyurkov1.github.io/blog/python/jupyter/2022/03/02/_03_03_Savitzky_Golay_Filter.html" />
+<meta property="og:site_name" content="Sergey Yurkov" />
+<meta property="og:image" content="https://sergeyyurkov1.github.io/blog/images/Savitzky-Golay-Filter.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-03-02T00:00:00-06:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://sergeyyurkov1.github.io/blog/images/Savitzky-Golay-Filter.png" />
+<meta property="twitter:title" content="How to smoothen noisy data and find peaks and dips in a line plot using Python" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-03-02T00:00:00-06:00","datePublished":"2022-03-02T00:00:00-06:00","description":"In this small tutorial we will use the U.S. COVID-19 inoculation data to demonstrate the effect of the Savitzky-Golay filter and find the most prominent peaks and dips in daily vaccinations.","headline":"How to smoothen noisy data and find peaks and dips in a line plot using Python","image":"https://sergeyyurkov1.github.io/blog/images/Savitzky-Golay-Filter.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://sergeyyurkov1.github.io/blog/python/jupyter/2022/03/02/_03_03_Savitzky_Golay_Filter.html"},"url":"https://sergeyyurkov1.github.io/blog/python/jupyter/2022/03/02/_03_03_Savitzky_Golay_Filter.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://sergeyyurkov1.github.io/blog/feed.xml" title="Sergey Yurkov" /><link rel="shortcut icon" type="image/x-icon" href="/blog/images/favicon.ico"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Primer/15.2.0/primer.css" integrity="sha512-xTz2ys4coGAOz8vuV1NcQBkgVmKhsSEtjbqyMJbBHRplFuvKIUo6xhLHpAyPt9mfR6twHJgn9OgVLuqOvjeBhg==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog==" crossorigin="anonymous" />
+
+<script>
+function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title") && (el.className != "emoji")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+}
+window.onload = wrap_img;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+    // add link icon to anchor tags
+    var elem = document.querySelectorAll(".anchor-link")
+    elem.forEach(e => (e.innerHTML = '<i class="fas fa-link fa-xs"></i>'));
+    });
+</script>
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Sergey Yurkov</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About Me</a><a class="page-link" href="/blog/search/">Search</a><a class="page-link" href="/blog/categories/">Tags</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">How to smoothen noisy data and find peaks and dips in a line plot using Python</h1><p class="page-description">In this small tutorial we will use the U.S. COVID-19 inoculation data to demonstrate the effect of the Savitzky-Golay filter and find the most prominent peaks and dips in daily vaccinations.</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-03-02T00:00:00-06:00" itemprop="datePublished">
+        Mar 2, 2022
+      </time>
+       • <span class="read-time" title="Estimated read time">
+    
+    
+      4 min read
+    
+</span></p>
+
+    
+      <p class="category-tags"><i class="fas fa-tags category-tags-icon"></i></i> 
+      
+        <a class="category-tags-link" href="/blog/categories/#python">python</a>
+        &nbsp;
+      
+        <a class="category-tags-link" href="/blog/categories/#jupyter">jupyter</a>
+        
+      
+      </p>
+    
+
+    
+      
+        <div class="pb-5 d-flex flex-justify-center">
+          <div class="px-2">
+
+    <a href="https://github.com/sergeyyurkov1/blog/tree/master/_notebooks/2022_03_03_Savitzky_Golay_Filter.ipynb" role="button" target="_blank">
+<img class="notebook-badge-image" src="/blog/assets/badges/github.svg" alt="View On GitHub">
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://mybinder.org/v2/gh/sergeyyurkov1/blog/master?filepath=_notebooks%2F2022_03_03_Savitzky_Golay_Filter.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/blog/assets/badges/binder.svg" alt="Open In Binder"/>
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://colab.research.google.com/github/sergeyyurkov1/blog/blob/master/_notebooks/2022_03_03_Savitzky_Golay_Filter.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/blog/assets/badges/colab.svg" alt="Open In Colab"/>
+    </a>
+</div>
+          <div class="px-2">
+  <a href="https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fsergeyyurkov1%2Fblog%2Fblob%2Fmaster%2F_notebooks%2F2022_03_03_Savitzky_Golay_Filter.ipynb" target="_blank">
+      <img class="notebook-badge-image" src="/blog/assets/badges/deepnote.svg" alt="Launch in Deepnote"/>
+  </a>
+</div>
+
+        </div>
+      </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <!--
+#################################################
+### THIS FILE WAS AUTOGENERATED! DO NOT EDIT! ###
+#################################################
+# file to edit: _notebooks/2022_03_03_Savitzky_Golay_Filter.ipynb
+-->
+
+<div class="container" id="notebook-container">
+        
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Presenting peaks and dips in a noisy line plot can be a bit of a challenge, as there is a lot of unnecessary visual information. Savitzky-Golay filter is a function that can be applied to such data in order to clarify the points with minimal distortion and precision loss. It was formulated for the exact purpose of finding maxima and minima in curve data by Savitzky themselves <sup id="fnref-1" class="footnote-ref"><a href="#fn-1">1</a></sup>. In this small tutorial we will use the U.S. COVID-19 inoculation data to demonstrate the effect of the filter and find the most prominent peaks and dips in daily vaccinations. We will use an interactive widget to tweak the optimal parameters for the filter.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-1:-Install-the-following-Python-packages">Step 1: Install the following Python packages<a class="anchor-link" href="#Step-1:-Install-the-following-Python-packages"> </a></h3>
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="err">!</span><span class="n">pip</span> <span class="n">install</span> <span class="n">widgetsnbextension</span> <span class="n">ipywidgets</span> <span class="n">jupyter</span><span class="o">-</span><span class="n">js</span><span class="o">-</span><span class="n">widgets</span><span class="o">-</span><span class="n">nbextension</span> <span class="n">ipympl</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-2:-Enable-widget-support-in-your-Jupyter-environment">Step 2: Enable widget support in your Jupyter environment<a class="anchor-link" href="#Step-2:-Enable-widget-support-in-your-Jupyter-environment"> </a></h3>
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="err">!</span><span class="n">jupyter</span> <span class="n">nbextension</span> <span class="n">enable</span> <span class="o">--</span><span class="n">py</span> <span class="n">widgetsnbextension</span> <span class="o">--</span><span class="n">sys</span><span class="o">-</span><span class="n">prefix</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Enabling notebook extension jupyter-js-widgets/extension...
+      - Validating: <span class="ansi-green-fg">OK</span>
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-3:-Importing-the-dependencies">Step 3: Importing the dependencies<a class="anchor-link" href="#Step-3:-Importing-the-dependencies"> </a></h3><p>We will use Pandas to read and manipulate the <code>.csv</code> file, Matplotlib for plotting the data, <code>signal</code> method from the Scipy package to apply the filter, Numpy and <code>argrelextrema</code> function to find the "extreme" values in the data, and finally <code>interactive</code> to build the necessary sliders.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="kn">from</span> <span class="nn">ipywidgets</span> <span class="kn">import</span> <span class="n">interactive</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-4:-Import-and-filter-the-data-by-location;-we-will-use-a-CSV-file-from-Our-World-in-Data.">Step 4: Import and filter the data by location; we will use a CSV file from Our World in Data.<a class="anchor-link" href="#Step-4:-Import-and-filter-the-data-by-location;-we-will-use-a-CSV-file-from-Our-World-in-Data."> </a></h3>
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="n">df_raw</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv&quot;</span><span class="p">,</span> <span class="n">usecols</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;daily_vaccinations&quot;</span><span class="p">],</span> <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">])</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="n">df_raw</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;United States&quot;</span><span class="p">]</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">df</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+
+  <div id="df-b8da73f2-5296-4497-b675-b5e06d54dbff">
+    <div class="colab-df-container">
+      <div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>date</th>
+      <th>daily_vaccinations</th>
+    </tr>
+    <tr>
+      <th>location</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>United States</th>
+      <td>2020-12-13</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2020-12-14</td>
+      <td>4545.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2020-12-15</td>
+      <td>27098.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2020-12-16</td>
+      <td>71299.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2020-12-17</td>
+      <td>121556.0</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2022-02-25</td>
+      <td>279746.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2022-02-26</td>
+      <td>271896.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2022-02-27</td>
+      <td>260524.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2022-02-28</td>
+      <td>222105.0</td>
+    </tr>
+    <tr>
+      <th>United States</th>
+      <td>2022-03-01</td>
+      <td>176778.0</td>
+    </tr>
+  </tbody>
+</table>
+<p>444 rows × 2 columns</p>
+</div>
+      <button class="colab-df-convert" onclick="convertToInteractive('df-b8da73f2-5296-4497-b675-b5e06d54dbff')" title="Convert this dataframe to an interactive table." style="display:none;">
+        
+  &lt;svg xmlns="http://www.w3.org/2000/svg" height="24px"viewBox="0 0 24 24"
+       width="24px"&gt;
+    <path d="M0 0h24v24H0V0z" fill="none" />
+    <path d="M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z" /><path d="M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z" />
+  &lt;/svg&gt;
+      </button>
+      
+  <style>
+    .colab-df-container {
+      display:flex;
+      flex-wrap:wrap;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+      <script>
+        const buttonEl =
+          document.querySelector('#df-b8da73f2-5296-4497-b675-b5e06d54dbff button.colab-df-convert');
+        buttonEl.style.display =
+          google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+        async function convertToInteractive(key) {
+          const element = document.querySelector('#df-b8da73f2-5296-4497-b675-b5e06d54dbff');
+          const dataTable =
+            await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                     [key], {});
+          if (!dataTable) return;
+
+          const docLinkHtml = 'Like what you see? Visit the ' +
+            '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+            + ' to learn more about interactive tables.';
+          element.innerHTML = '';
+          dataTable['output_type'] = 'display_data';
+          await google.colab.output.renderOutput(dataTable, element);
+          const docLink = document.createElement('div');
+          docLink.innerHTML = docLinkHtml;
+          element.appendChild(docLink);
+        }
+      </script>
+    </div>
+  </div>
+  
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Step-5:-Build-the-function-and-plot-the-data">Step 5: Build the function and plot the data<a class="anchor-link" href="#Step-5:-Build-the-function-and-plot-the-data"> </a></h3><p>First, we assign our X and Y values. We feed the Y values, or the first 444 consecutive days of <code>daily_vaccinations</code>, into <code>signal.savgol_filter()</code> method. This function requires 2 parameters: <code>windows_size</code> and <code>polyorder</code>. According to the documentation, <code>windows_size</code> is always a positive <em>odd</em> integer and <code>polyorder</code> is <em>any</em> positive integer that must be less than <code>window_length</code> <sup id="fnref-2" class="footnote-ref"><a href="#fn-2">2</a></sup>. Unfortunately my understanding of the concept is very limited, however the general goal is to "[keep] the important features and getting rid of the meaningless fluctuations" <sup id="fnref-3" class="footnote-ref"><a href="#fn-3">3</a></sup>. These variables control the smoothness of the curve: too low and the curve will loose the detail, too high -- it will become too distorted; the rule of thumb is to start low and build up from that. Because the exact values vary with data, they cannot be known beforehand. Controlling them visually will help us find the optimal curve for our purpose, hence the need for a slider to set the inputs more intuitively.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="k">def</span> <span class="nf">make_iplot</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">polyorder</span><span class="p">):</span>
+  <span class="n">data_x</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+  <span class="n">data_y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;daily_vaccinations&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="c1"># original</span>
+  <span class="n">data_y_filtered</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">polyorder</span><span class="p">)</span> <span class="c1"># smoothed</span>
+
+  <span class="c1"># Find peaks (max)</span>
+  <span class="n">peak_indexes</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">argrelextrema</span><span class="p">(</span><span class="n">data_y_filtered</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">)</span>
+  <span class="n">peak_indexes</span> <span class="o">=</span> <span class="n">peak_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="c1"># Find valleys (min)</span>
+  <span class="n">valley_indexes</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">argrelextrema</span><span class="p">(</span><span class="n">data_y_filtered</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">)</span>
+  <span class="n">valley_indexes</span> <span class="o">=</span> <span class="n">valley_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+  <span class="c1"># Matplotlib plot</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;grey&quot;</span><span class="p">)</span> <span class="c1"># line plot for the original data</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">data_y_filtered</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">)</span> <span class="c1"># line plot for the filtered data</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data_x</span><span class="p">[</span><span class="n">valley_indexes</span><span class="p">],</span> <span class="n">data_y_filtered</span><span class="p">[</span><span class="n">valley_indexes</span><span class="p">],</span> <span class="s2">&quot;o&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;dip&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data_x</span><span class="p">[</span><span class="n">peak_indexes</span><span class="p">],</span> <span class="n">data_y_filtered</span><span class="p">[</span><span class="n">peak_indexes</span><span class="p">],</span> <span class="s2">&quot;o&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;peak&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;g&quot;</span><span class="p">)</span>
+  <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>With that said, we arbitrarily set the range of 1 to 100 for the <code>windows_size</code> slider, and 1 to 10 for <code>polyorder</code>.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+
+<span class="n">iplot</span> <span class="o">=</span> <span class="n">interactive</span><span class="p">(</span>
+  <span class="n">make_iplot</span><span class="p">,</span>
+  <span class="n">window_size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+  <span class="n">polyorder</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">iplot</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img src="/blog/images/copied_from_nb/images/1.png" alt="" /></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We set the initial values of 3 and 1 (<code>polyorder</code> &lt; <code>windows_size</code>) as starting points, which gives us a result that isn't dissimilar to the original data (red dots represent dips and green ones -- peaks).</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-python"><pre><span></span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+
+<span class="n">iplot</span> <span class="o">=</span> <span class="n">interactive</span><span class="p">(</span>
+  <span class="n">make_iplot</span><span class="p">,</span>
+  <span class="n">window_size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+  <span class="n">polyorder</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">iplot</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img src="/blog/images/copied_from_nb/images/2.png" alt="" /></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>With some experimentation, values 23 and 3 give us a relatively smooth graph with less visual noise.</p>
+<h2 id="Conclusion">Conclusion<a class="anchor-link" href="#Conclusion"> </a></h2><p>Applying the Savitzky-Golay filter helps get rid of noise and present a better picture of the data. This example may not be the best, as it doesn't fluctuate as much as other linear data, such as digital signals, however it can be applied to finding prominent features in any type of data.</p>
+<p><div class="footnotes"><p id="fn-1">1. <a href="https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter">Savitzky–Golay filter</a><a href="#fnref-1" class="footnote footnotes">↩</a></p></div></p>
+<p><div class="footnotes"><p id="fn-2">2. <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.savgol_filter.html">scipy.signal.savgol_filter</a><a href="#fnref-2" class="footnote footnotes">↩</a></p></div></p>
+<p><div class="footnotes"><p id="fn-3">3. <a href="https://blog.finxter.com/smoothing-your-data-with-the-savitzky-golay-filter-and-python/">Smoothing Your Data with the Savitzky-Golay Filter and Python</a><a href="#fnref-3" class="footnote footnotes">↩</a></p></div></p>
+
+</div>
+</div>
+</div>
+</div>
+
+
+
+  </div><!-- from https://github.com/utterance/utterances -->
+<script src="https://utteranc.es/client.js"
+        repo="sergeyyurkov1/blog"
+        issue-term="title"
+        label="blogpost-comment"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script><a class="u-url" href="/blog/python/jupyter/2022/03/02/_03_03_Savitzky_Golay_Filter.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/blog/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/blog/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+      </div>
+      <div class="footer-col">
+        <p></p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"><li><a rel="me" href="https://github.com/sergeyyurkov1" target="_blank" title="sergeyyurkov1"><svg class="svg-icon grey"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg></a></li></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
